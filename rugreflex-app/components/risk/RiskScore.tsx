@@ -1,126 +1,136 @@
+"use client";
+
 interface RiskScoreProps {
   score: number;
+  label?: string;
+  summary?: string;
+}
+
+function clamp(value: number) {
+  return Math.max(0, Math.min(100, value));
 }
 
 function getRisk(score: number) {
-  if (score <= 20) {
+  if (score >= 80) {
     return {
-      label: "LOW OBSERVED RISK",
-      range: "0–20",
+      label: "CRITICAL RISK",
+      description: "Multiple severe risk indicators detected.",
     };
   }
 
-  if (score <= 40) {
+  if (score >= 60) {
     return {
-      label: "MODERATE",
-      range: "21–40",
+      label: "HIGH RISK",
+      description: "Several significant risk indicators detected.",
     };
   }
 
-  if (score <= 60) {
+  if (score >= 35) {
     return {
-      label: "ELEVATED",
-      range: "41–60",
-    };
-  }
-
-  if (score <= 80) {
-    return {
-      label: "HIGH",
-      range: "61–80",
+      label: "MODERATE RISK",
+      description: "Some risk indicators require attention.",
     };
   }
 
   return {
-    label: "EXTREME",
-    range: "81–100",
+    label: "LOWER RISK",
+    description: "Fewer major risk indicators were observed.",
   };
 }
 
-export default function RiskScore({ score }: RiskScoreProps) {
-  const safeScore = Math.min(100, Math.max(0, score));
-  const risk = getRisk(safeScore);
+export default function RiskScore({
+  score,
+  label,
+  summary,
+}: RiskScoreProps) {
+  const normalizedScore = clamp(Number(score) || 0);
+  const risk = getRisk(normalizedScore);
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-slate-950/70 p-6 shadow-2xl">
-      <div className="mb-6">
-        <div className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-400">
-          RugReflex Intelligence
-        </div>
-
-        <h2 className="mt-2 text-2xl font-bold text-white">
-          Observed Risk Score
-        </h2>
-
-        <p className="mt-2 text-sm text-slate-400">
-          Based on observable signals available during this scan.
-        </p>
-      </div>
-
-      <div className="grid gap-8 md:grid-cols-[180px_1fr] md:items-center">
-        <div className="flex flex-col items-center justify-center rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-          <div className="text-6xl font-black tracking-tight text-white">
-            {safeScore}
-            <span className="text-2xl text-slate-500">/100</span>
-          </div>
-
-          <div className="mt-3 text-center text-xs font-bold uppercase tracking-widest text-emerald-400">
-            {risk.label}
-          </div>
-        </div>
-
+    <section className="rounded-2xl border border-white/[0.07] bg-[#1b050b]/75 p-6">
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="mb-3 flex items-center justify-between text-xs text-slate-500">
-            <span>Lower risk</span>
-            <span>Higher risk</span>
-          </div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/25">
+            RugReflex Risk Assessment
+          </p>
 
-          <div className="relative h-4 overflow-hidden rounded-full bg-slate-800">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-yellow-400 to-red-500"
-              style={{ width: `${Math.max(safeScore, 2)}%` }}
-            />
-          </div>
+          <h2 className="mt-2 text-2xl font-black tracking-tight">
+            {label || risk.label}
+          </h2>
 
-          <div className="mt-3 flex justify-between text-[10px] text-slate-500">
-            <span>0</span>
-            <span>20</span>
-            <span>40</span>
-            <span>60</span>
-            <span>80</span>
-            <span>100</span>
-          </div>
+          <p className="mt-2 max-w-xl text-xs leading-5 text-white/30">
+            {summary || risk.description}
+          </p>
+        </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-5">
-            {[
-              ["0–20", "LOW"],
-              ["21–40", "MODERATE"],
-              ["41–60", "ELEVATED"],
-              ["61–80", "HIGH"],
-              ["81–100", "EXTREME"],
-            ].map(([range, label]) => (
-              <div
-                key={range}
-                className={`rounded-xl border p-3 text-center ${
-                  range === risk.range
-                    ? "border-cyan-400/40 bg-cyan-400/10"
-                    : "border-white/5 bg-white/[0.02]"
-                }`}
-              >
-                <div className="text-[10px] text-slate-500">{range}</div>
-                <div className="mt-1 text-[10px] font-bold text-slate-300">
-                  {label}
-                </div>
-              </div>
-            ))}
+        <div className="flex shrink-0 items-center gap-4">
+          <div className="text-right">
+            <p className="text-[9px] uppercase tracking-wider text-white/20">
+              Risk Score
+            </p>
+
+            <p className="mt-1 text-4xl font-black">
+              {Math.round(normalizedScore)}
+              <span className="text-sm font-medium text-white/20">
+                /100
+              </span>
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-white/5 bg-white/[0.02] p-4 text-sm leading-6 text-slate-400">
-        The checks performed by RugReflex found observable blockchain signals
-        associated with this token. This does not mean the token is safe or
-        guaranteed to perform in any particular way.
+      <div className="mt-7">
+        <div className="mb-2 flex items-center justify-between text-[9px] uppercase tracking-wider text-white/20">
+          <span>Lower Risk</span>
+          <span>Higher Risk</span>
+        </div>
+
+        <div className="h-3 overflow-hidden rounded-full bg-white/[0.05]">
+          <div
+            className="h-full rounded-full bg-white transition-all duration-700"
+            style={{
+              width: `${normalizedScore}%`,
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="mt-5 grid grid-cols-4 gap-2">
+        <div className="rounded-xl border border-white/[0.05] bg-white/[0.018] p-3">
+          <p className="text-[8px] uppercase tracking-wider text-white/20">
+            0–34
+          </p>
+          <p className="mt-1 text-[10px] font-bold text-white/45">
+            Lower
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-white/[0.05] bg-white/[0.018] p-3">
+          <p className="text-[8px] uppercase tracking-wider text-white/20">
+            35–59
+          </p>
+          <p className="mt-1 text-[10px] font-bold text-white/45">
+            Moderate
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-white/[0.05] bg-white/[0.018] p-3">
+          <p className="text-[8px] uppercase tracking-wider text-white/20">
+            60–79
+          </p>
+          <p className="mt-1 text-[10px] font-bold text-white/45">
+            High
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-white/[0.05] bg-white/[0.018] p-3">
+          <p className="text-[8px] uppercase tracking-wider text-white/20">
+            80–100
+          </p>
+          <p className="mt-1 text-[10px] font-bold text-white/45">
+            Critical
+          </p>
+        </div>
       </div>
     </section>
   );

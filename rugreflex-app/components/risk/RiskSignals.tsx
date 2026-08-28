@@ -1,66 +1,87 @@
-interface RiskSignal {
+export interface RiskSignal {
   title: string;
   description: string;
-  status?: "positive" | "warning" | "danger";
+  severity: "critical" | "high" | "medium" | "low" | "info";
+  points?: number;
 }
 
 interface RiskSignalsProps {
   signals: RiskSignal[];
 }
 
-export default function RiskSignals({ signals }: RiskSignalsProps) {
-  return (
-    <section>
-      <div className="mb-5 flex items-end justify-between">
-        <div>
-          <div className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-400">
-            Intelligence
-          </div>
-          <h2 className="mt-2 text-2xl font-bold text-white">
-            Detected Risk Signals
-          </h2>
-        </div>
+const severityLabel = {
+  critical: "Critical",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+  info: "Info",
+};
 
-        <div className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-slate-400">
-          {signals.length} signals
-        </div>
+export default function RiskSignals({
+  signals,
+}: RiskSignalsProps) {
+  if (!signals.length) {
+    return (
+      <section className="rounded-2xl border border-white/[0.07] bg-[#1b050b]/75 p-6">
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/25">
+          Risk Signals
+        </p>
+
+        <h3 className="mt-2 text-xl font-black">
+          No signals available
+        </h3>
+
+        <p className="mt-2 text-xs leading-5 text-white/25">
+          RugReflex could not identify additional risk signals
+          from the available scan data.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="rounded-2xl border border-white/[0.07] bg-[#1b050b]/75 p-6">
+      <div className="mb-5">
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/25">
+          Risk Signals
+        </p>
+
+        <h3 className="mt-2 text-xl font-black">
+          Detected Indicators
+        </h3>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        {signals.map((signal, index) => {
-          const status = signal.status || "positive";
-
-          return (
-            <div
-              key={`${signal.title}-${index}`}
-              className="rounded-2xl border border-white/10 bg-slate-950/60 p-5"
-            >
-              <div className="flex gap-4">
-                <div
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                    status === "danger"
-                      ? "bg-red-500/10 text-red-400"
-                      : status === "warning"
-                        ? "bg-yellow-500/10 text-yellow-400"
-                        : "bg-emerald-500/10 text-emerald-400"
-                  }`}
-                >
-                  {status === "danger" ? "!" : status === "warning" ? "!" : "✓"}
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold uppercase tracking-wide text-white">
+      <div className="space-y-3">
+        {signals.map((signal, index) => (
+          <div
+            key={`${signal.title}-${index}`}
+            className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4"
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold">
                     {signal.title}
-                  </h3>
+                  </span>
 
-                  <p className="mt-2 text-sm leading-6 text-slate-400">
-                    {signal.description}
-                  </p>
+                  <span className="rounded-full border border-white/[0.07] px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-white/30">
+                    {severityLabel[signal.severity]}
+                  </span>
                 </div>
+
+                <p className="mt-2 text-xs leading-5 text-white/25">
+                  {signal.description}
+                </p>
               </div>
+
+              {signal.points !== undefined && (
+                <span className="shrink-0 font-mono text-[10px] text-white/35">
+                  +{signal.points} risk
+                </span>
+              )}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </section>
   );
