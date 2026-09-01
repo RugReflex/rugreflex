@@ -30,7 +30,11 @@ export type RiskInput = {
    HELPERS
    ========================================================= */
 
-function clamp(value: number, min: number, max: number) {
+function clamp(
+  value: number,
+  min: number,
+  max: number
+) {
   return Math.min(Math.max(value, min), max);
 }
 
@@ -46,24 +50,33 @@ export function calculateRisk(input: RiskInput): {
 
   const flags: RiskFlag[] = [];
 
-  const topHolder = Math.max(
+  /* =======================================================
+     NORMALIZE INPUTS
+     ======================================================= */
+
+  const topHolder = clamp(
+    Number(input.topHolderPercentage) || 0,
     0,
-    input.topHolderPercentage || 0
+    100
   );
 
-  const top10 = Math.max(
+  const top10 = clamp(
+    Number(input.top10Percentage) || 0,
     0,
-    input.top10Percentage || 0
+    100
   );
 
   const holders = Math.max(
     0,
-    input.totalHolders || 0
+    Number(input.totalHolders) || 0
   );
 
   const liquidity =
     input.liquidityUsd != null
-      ? Math.max(0, input.liquidityUsd)
+      ? Math.max(
+          0,
+          Number(input.liquidityUsd) || 0
+        )
       : null;
 
   /* =======================================================
@@ -78,7 +91,8 @@ export function calculateRisk(input: RiskInput): {
 
     flags.push({
       type: "danger",
-      title: "EXTREME TOP HOLDER CONCENTRATION",
+      title:
+        "EXTREME TOP HOLDER CONCENTRATION",
       description:
         `The largest detected holder controls ${topHolder.toFixed(
           2
@@ -89,7 +103,8 @@ export function calculateRisk(input: RiskInput): {
 
     flags.push({
       type: "danger",
-      title: "VERY HIGH TOP HOLDER CONCENTRATION",
+      title:
+        "VERY HIGH TOP HOLDER CONCENTRATION",
       description:
         `The largest detected holder controls ${topHolder.toFixed(
           2
@@ -100,7 +115,8 @@ export function calculateRisk(input: RiskInput): {
 
     flags.push({
       type: "danger",
-      title: "HIGH TOP HOLDER CONCENTRATION",
+      title:
+        "HIGH TOP HOLDER CONCENTRATION",
       description:
         `The largest detected holder controls ${topHolder.toFixed(
           2
@@ -111,7 +127,8 @@ export function calculateRisk(input: RiskInput): {
 
     flags.push({
       type: "warning",
-      title: "NOTABLE TOP HOLDER CONCENTRATION",
+      title:
+        "NOTABLE TOP HOLDER CONCENTRATION",
       description:
         `The largest detected holder controls ${topHolder.toFixed(
           2
@@ -122,7 +139,8 @@ export function calculateRisk(input: RiskInput): {
 
     flags.push({
       type: "warning",
-      title: "MODERATE TOP HOLDER CONCENTRATION",
+      title:
+        "MODERATE TOP HOLDER CONCENTRATION",
       description:
         `The largest detected holder controls ${topHolder.toFixed(
           2
@@ -133,7 +151,8 @@ export function calculateRisk(input: RiskInput): {
 
     flags.push({
       type: "positive",
-      title: "LOW TOP HOLDER CONCENTRATION",
+      title:
+        "LOW TOP HOLDER CONCENTRATION",
       description:
         `The largest detected holder controls ${topHolder.toFixed(
           2
@@ -142,7 +161,8 @@ export function calculateRisk(input: RiskInput): {
   } else {
     flags.push({
       type: "positive",
-      title: "LOW TOP HOLDER CONCENTRATION",
+      title:
+        "LOW TOP HOLDER CONCENTRATION",
       description:
         `The largest detected holder controls only ${topHolder.toFixed(
           2
@@ -164,7 +184,8 @@ export function calculateRisk(input: RiskInput): {
 
     flags.push({
       type: "danger",
-      title: "EXTREME TOP 10 CONCENTRATION",
+      title:
+        "EXTREME TOP 10 CONCENTRATION",
       description:
         `The largest ten detected holders control ${top10.toFixed(
           2
@@ -175,7 +196,8 @@ export function calculateRisk(input: RiskInput): {
 
     flags.push({
       type: "danger",
-      title: "VERY HIGH TOP 10 CONCENTRATION",
+      title:
+        "VERY HIGH TOP 10 CONCENTRATION",
       description:
         `The largest ten detected holders control ${top10.toFixed(
           2
@@ -186,7 +208,8 @@ export function calculateRisk(input: RiskInput): {
 
     flags.push({
       type: "danger",
-      title: "HIGH TOP 10 CONCENTRATION",
+      title:
+        "HIGH TOP 10 CONCENTRATION",
       description:
         `The largest ten detected holders control ${top10.toFixed(
           2
@@ -197,7 +220,8 @@ export function calculateRisk(input: RiskInput): {
 
     flags.push({
       type: "warning",
-      title: "NOTABLE TOP 10 CONCENTRATION",
+      title:
+        "NOTABLE TOP 10 CONCENTRATION",
       description:
         `The largest ten detected holders control ${top10.toFixed(
           2
@@ -208,7 +232,8 @@ export function calculateRisk(input: RiskInput): {
 
     flags.push({
       type: "warning",
-      title: "MODERATE TOP 10 CONCENTRATION",
+      title:
+        "MODERATE TOP 10 CONCENTRATION",
       description:
         `The largest ten detected holders control ${top10.toFixed(
           2
@@ -219,7 +244,8 @@ export function calculateRisk(input: RiskInput): {
 
     flags.push({
       type: "positive",
-      title: "RELATIVELY BROAD TOP 10 DISTRIBUTION",
+      title:
+        "RELATIVELY BROAD TOP 10 DISTRIBUTION",
       description:
         `The largest ten detected holders control ${top10.toFixed(
           2
@@ -228,7 +254,8 @@ export function calculateRisk(input: RiskInput): {
   } else {
     flags.push({
       type: "positive",
-      title: "DISTRIBUTION LOOKS BROAD",
+      title:
+        "DISTRIBUTION LOOKS BROAD",
       description:
         `The largest ten detected holders control ${top10.toFixed(
           2
@@ -243,8 +270,10 @@ export function calculateRisk(input: RiskInput): {
      Maximum: 15 points
      ======================================================= */
 
+  let holderPoints = 0;
+
   if (holders < 20) {
-    score += 15;
+    holderPoints = 15;
 
     flags.push({
       type: "danger",
@@ -253,7 +282,7 @@ export function calculateRisk(input: RiskInput): {
         `Only ${holders.toLocaleString()} holders were detected.`,
     });
   } else if (holders < 50) {
-    score += 12;
+    holderPoints = 12;
 
     flags.push({
       type: "danger",
@@ -262,7 +291,7 @@ export function calculateRisk(input: RiskInput): {
         `Only ${holders.toLocaleString()} holders were detected.`,
     });
   } else if (holders < 100) {
-    score += 9;
+    holderPoints = 9;
 
     flags.push({
       type: "warning",
@@ -271,7 +300,7 @@ export function calculateRisk(input: RiskInput): {
         `${holders.toLocaleString()} holders were detected.`,
     });
   } else if (holders < 250) {
-    score += 6;
+    holderPoints = 6;
 
     flags.push({
       type: "warning",
@@ -280,7 +309,7 @@ export function calculateRisk(input: RiskInput): {
         `${holders.toLocaleString()} holders were detected.`,
     });
   } else if (holders < 500) {
-    score += 3;
+    holderPoints = 3;
 
     flags.push({
       type: "positive",
@@ -297,6 +326,10 @@ export function calculateRisk(input: RiskInput): {
     });
   }
 
+  /* IMPORTANT:
+     Add holder-count risk points to total score. */
+  score += holderPoints;
+
   /* =======================================================
      4. LIQUIDITY
      Maximum: 20 points
@@ -305,7 +338,8 @@ export function calculateRisk(input: RiskInput): {
   if (liquidity === null) {
     flags.push({
       type: "warning",
-      title: "LIQUIDITY DATA UNAVAILABLE",
+      title:
+        "LIQUIDITY DATA UNAVAILABLE",
       description:
         "RugReflex could not confirm active liquidity data during this scan.",
     });
@@ -327,7 +361,9 @@ export function calculateRisk(input: RiskInput): {
       description:
         `The largest detected liquidity pool has approximately $${liquidity.toLocaleString(
           undefined,
-          { maximumFractionDigits: 0 }
+          {
+            maximumFractionDigits: 0,
+          }
         )} in liquidity.`,
     });
   } else if (liquidity < 10_000) {
@@ -339,7 +375,9 @@ export function calculateRisk(input: RiskInput): {
       description:
         `The largest detected liquidity pool has approximately $${liquidity.toLocaleString(
           undefined,
-          { maximumFractionDigits: 0 }
+          {
+            maximumFractionDigits: 0,
+          }
         )} in liquidity.`,
     });
   } else if (liquidity < 25_000) {
@@ -351,7 +389,9 @@ export function calculateRisk(input: RiskInput): {
       description:
         `The largest detected liquidity pool has approximately $${liquidity.toLocaleString(
           undefined,
-          { maximumFractionDigits: 0 }
+          {
+            maximumFractionDigits: 0,
+          }
         )} in liquidity.`,
     });
   } else if (liquidity < 50_000) {
@@ -363,7 +403,9 @@ export function calculateRisk(input: RiskInput): {
       description:
         `The largest detected liquidity pool has approximately $${liquidity.toLocaleString(
           undefined,
-          { maximumFractionDigits: 0 }
+          {
+            maximumFractionDigits: 0,
+          }
         )} in liquidity.`,
     });
   } else if (liquidity < 100_000) {
@@ -375,7 +417,9 @@ export function calculateRisk(input: RiskInput): {
       description:
         `The largest detected liquidity pool has approximately $${liquidity.toLocaleString(
           undefined,
-          { maximumFractionDigits: 0 }
+          {
+            maximumFractionDigits: 0,
+          }
         )} in liquidity.`,
     });
   } else {
@@ -438,7 +482,11 @@ export function calculateRisk(input: RiskInput): {
      Maximum theoretical score: 100
      ======================================================= */
 
-  score = clamp(Math.round(score), 0, 100);
+  score = clamp(
+    Math.round(score),
+    0,
+    100
+  );
 
   /* =======================================================
      RISK LEVEL

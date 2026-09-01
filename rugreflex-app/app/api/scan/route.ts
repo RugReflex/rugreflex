@@ -1,28 +1,64 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAsset, getTokenSupply } from "@/lib/helius";
-import { getDexScreenerData } from "@/lib/dexscreener";
+import {
+  getAsset,
+  getTokenSupply,
+} from "@/lib/helius";
+import {
+  getDexScreenerData,
+} from "@/lib/dexscreener";
 
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest
+) {
   try {
-    const mint = request.nextUrl.searchParams.get("mint");
+    const mint =
+      request.nextUrl.searchParams.get("mint")?.trim();
 
     if (!mint) {
       return NextResponse.json(
         {
+          success: false,
           error: "Token mint address is required",
         },
         { status: 400 }
       );
     }
 
-    const [asset, supply, market] = await Promise.all([
-      getAsset(mint),
-      getTokenSupply(mint),
-      getDexScreenerData(mint),
-    ]);
+    /*
+     * =====================================================
+     * FETCH CORE TOKEN + MARKET DATA IN PARALLEL
+     * =====================================================
+     */
 
-    const content = asset?.content || {};
-    const metadata = content?.metadata || {};
+    const [asset, supply, market] =
+      await Promise.all([
+        getAsset(mint),
+        getTokenSupply(mint),
+        getDexScreenerData(mint),
+      ]);
+
+    if (!asset) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Token not found or Helius returned no asset data.",
+        },
+        { status: 404 }
+      );
+    }
+
+    /*
+     * =====================================================
+     * TOKEN METADATA
+     * =====================================================
+     */
+
+    const content =
+      asset?.content || {};
+
+    const metadata =
+      content?.metadata || {};
 
     const tokenName =
       metadata?.name ||
@@ -32,7 +68,19 @@ export async function GET(request: NextRequest) {
     const symbol =
       metadata?.symbol ||
       asset?.token_info?.symbol ||
-      "";
+      "UNKNOWN";
+
+    const image =
+      metadata?.image || null;
+
+    const description =
+      metadata?.description || null;
+
+    /*
+     * =====================================================
+     * SUPPLY
+     * =====================================================
+     */
 
     const decimals =
       supply?.decimals ??
@@ -47,58 +95,140 @@ export async function GET(request: NextRequest) {
         ? rawSupply / 10 ** decimals
         : rawSupply;
 
-    const mintAuthority =
-      asset?.authorities?.find(
-        (authority: any) =>
-          authority?.scopes?.includes("mint")
-      )?.address || null;
+    /*
+     * =====================================================
+     * TOKEN AUTHORITIES
+     *
+     * Helius asset authority data can expose scopes.
+     * We normalize it into a simple RugReflex format.
+     * =====================================================
+     */
 
-    const freezeAuthority =
-      asset?.authorities?.find(
-        (authority: any) =>
-          authority?.scopes?.includes("freeze")
-      )?.address || null;
+    const authorities =
+      Array.isArray(asset?.authorities)
+        ? asset.authorities
+        : [];
+
+    let mintAuthority:
+      string | null = null;
+
+    let freezeAuthority:
+      string | null = null;
+
+    for (const authority of authorities) {
+      const scopes = Array.isArray(
+        authority?.scopes
+      )
+        ? authority.scopes
+        : [];
+
+      const type =
+        authority?.type || "";
+
+      if (
+        type === "mint" ||
+        scopes.includes("mint")
+      ) {
+        mintAuthority =
+          authority?.address || null;
+      }
+
+      if (
+        type === "freeze" ||
+        scopes.includes("freeze")
+      ) {
+        freezeAuthority =
+          authority?.address || null;
+      }
+    }
+
+    /*
+     * =====================================================
+     * SECURITY
+     * =====================================================
+     */
+
+    const security = {
+      mintAuthority,
+      freezeAuthority,
+
+      mintAuthorityActive:
+        mintAuthority !== null,
+
+      freezeAuthorityActive:
+        freezeAuthority !== null,
+    };
+
+    /*
+     * =====================================================
+     * MARKET DATA
+     * =====================================================
+     */
+
+    const marketData = {
+      priceUsd:
+        market.priceUsd ?? null,
+
+      marketCap:
+        market.marketCap ?? null,
+
+      fdv:
+        market.fdv ?? null,
+
+      liquidityUsd:
+        market.liquidityUsd ?? null,
+
+      volume24h:
+        market.volume24h ?? null,
+
+      dex:
+        market.dex ?? null,
+
+      pairAddress:
+        market.pairAddress ?? null,
+
+      pairUrl:
+        market.pairUrl ?? null,
+
+      pairCount:
+        market.pairs?.length ?? 0,
+    };
+
+    /*
+     * =====================================================
+     * UNIFIED RUGREFLEX SCAN RESPONSE
+     * =====================================================
+     */
 
     return NextResponse.json({
       success: true,
 
-      token: {
+      scan: {
         mint,
-        name: tokenName,
-        symbol,
-        decimals,
-        supply: totalSupply,
 
-        price: market.priceUsd,
+        token: {
+          mint,
+          name: tokenName,
+          symbol,
+          image,
+          description,
+          decimals,
+          supply: totalSupply,
+        },
 
-        marketCap: market.marketCap,
+        market: marketData,
 
-        fdv: market.fdv,
+        security,
+
+        timestamp:
+          new Date().toISOString(),
       },
-
-      market: {
-        priceUsd: market.priceUsd,
-        marketCap: market.marketCap,
-        fdv: market.fdv,
-        liquidityUsd: market.liquidityUsd,
-        volume24h: market.volume24h,
-        dex: market.dex,
-        pairAddress: market.pairAddress,
-        pairUrl: market.pairUrl,
-        pairs: market.pairs.length,
-      },
-
-      security: {
-        mintAuthority,
-        freezeAuthority,
-        mintRevoked: !mintAuthority,
-        freezeRevoked: !freezeAuthority,
-      },
-
-      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("RugReflex scan error:", error);
+    console.error(
+      "RugReflex unified scan error:",
+      error
+    );
 
     return NextResponse.json(
       {

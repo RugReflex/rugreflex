@@ -200,27 +200,119 @@ export default function Home() {
 
     try {
       /* ===================================================
-         TOKEN INFORMATION
+         UNIFIED CORE SCAN
+         Token + Market + Security
          =================================================== */
 
-      const tokenResponse = await fetch(
-        `/api/token?address=${encodeURIComponent(
-          tokenAddress
-        )}`
+      const scanResponse = await fetch(
+        `/api/scan?mint=${encodeURIComponent(tokenAddress)}`
       );
 
-      const tokenResult = await tokenResponse.json();
+      const scanResult = await scanResponse.json();
 
-      console.log("TOKEN API RESULT:", tokenResult);
+      console.log("UNIFIED SCAN API RESULT:", scanResult);
 
-      if (!tokenResponse.ok || !tokenResult.success) {
+      if (!scanResponse.ok || !scanResult.success) {
         throw new Error(
-          tokenResult.error ||
-            "Unable to fetch token information."
+          scanResult.error ||
+            "Unable to scan this token."
         );
       }
 
-      setToken(tokenResult.data);
+      const scan = scanResult.scan;
+
+      /* ===================================================
+         TOKEN INFORMATION
+         =================================================== */
+
+      setToken({
+        id: scan.mint,
+
+        content: {
+          metadata: {
+            name: scan.token?.name,
+            symbol: scan.token?.symbol,
+            description: scan.token?.description || undefined,
+            image: scan.token?.image || undefined,
+          },
+        },
+
+        token_info: {
+          symbol: scan.token?.symbol,
+          supply: scan.token?.supply,
+          decimals: scan.token?.decimals,
+
+          price_info: {
+            price_per_token:
+              scan.market?.priceUsd ?? undefined,
+            currency: "USD",
+          },
+        },
+      });
+
+      /* ===================================================
+         SECURITY INFORMATION
+         =================================================== */
+
+      if (scan.security) {
+        setSecurityData(scan.security);
+      }
+
+      /* ===================================================
+         LIQUIDITY / MARKET INFORMATION
+         =================================================== */
+
+      if (scan.market) {
+        setLiquidityData({
+          status:
+            scan.market.pairCount > 0 &&
+            scan.market.liquidityUsd !== null &&
+            scan.market.liquidityUsd !== undefined
+              ? "AVAILABLE"
+              : "UNKNOWN",
+
+          assessment:
+            scan.market.pairCount > 0 &&
+            scan.market.liquidityUsd !== null &&
+            scan.market.liquidityUsd !== undefined
+              ? "Liquidity data available."
+              : "NO LIQUIDITY POOL FOUND",
+
+          note:
+            scan.market.pairCount > 0 &&
+            scan.market.liquidityUsd !== null &&
+            scan.market.liquidityUsd !== undefined
+              ? "Market data retrieved from DexScreener."
+              : "No active Solana trading pair with available liquidity data was found for this token.",
+
+          liquidityUsd:
+            scan.market.liquidityUsd ?? null,
+
+          pairCount:
+            scan.market.pairCount ?? 0,
+
+          dex:
+            scan.market.dex ?? null,
+
+          pairAddress:
+            scan.market.pairAddress ?? null,
+
+          priceUsd:
+            scan.market.priceUsd ?? null,
+
+          volume24h:
+            scan.market.volume24h ?? undefined,
+
+          marketCap:
+            scan.market.marketCap ?? null,
+
+          fdv:
+            scan.market.fdv ?? null,
+
+          pairUrl:
+            scan.market.pairUrl ?? null,
+        });
+      }
 
       /* ===================================================
          HOLDER INFORMATION
@@ -245,62 +337,13 @@ export default function Home() {
         holdersResult.success
       ) {
         setHolderData(holdersResult);
-      }
-
-      /* ===================================================
-         TOKEN SECURITY
-         =================================================== */
-
-      const securityResponse = await fetch(
-        `/api/security?address=${encodeURIComponent(
-          tokenAddress
-        )}`
-      );
-
-      const securityResult: SecurityResponse =
-        await securityResponse.json();
-
-      console.log(
-        "SECURITY API RESULT:",
-        securityResult
-      );
-
-      if (
-        securityResponse.ok &&
-        securityResult.success
-      ) {
-        setSecurityData(
-          securityResult.security
+      } else {
+        console.warn(
+          "Holder analysis unavailable:",
+          holdersResult.error
         );
       }
 
-      /* ===================================================
-         LIQUIDITY INFORMATION
-         =================================================== */
-
-      const liquidityResponse = await fetch(
-        `/api/liquidity?address=${encodeURIComponent(
-          tokenAddress
-        )}`
-      );
-
-      const liquidityResult =
-        await liquidityResponse.json();
-
-      console.log(
-        "LIQUIDITY API RESULT:",
-        liquidityResult
-      );
-
-      if (
-        liquidityResponse.ok &&
-        liquidityResult.success &&
-        liquidityResult.liquidity
-      ) {
-        setLiquidityData(
-          liquidityResult.liquidity
-        );
-      }
     } catch (err) {
       console.error("SCAN ERROR:", err);
 
@@ -349,43 +392,8 @@ export default function Home() {
   }
 
   /* =======================================================
-     RISK SCORE
+     RISK ANALYSIS
      ======================================================= */
-
-  function calculateRiskScore(): RiskLevel {
-    if (!holderData) {
-      return {
-        score: 0,
-        label: "NOT ANALYZED",
-        description:
-          "Risk analysis will appear after holder data is retrieved.",
-      };
-    }
-
-    const result = calculateRisk({
-      topHolderPercentage:
-        holderData.topHolderPercentage || 0,
-
-      top10Percentage:
-        holderData.top10Percentage || 0,
-
-      totalHolders:
-        holderData.totalHolders || 0,
-
-      mintAuthorityActive:
-        securityData?.mintAuthorityActive || false,
-
-      freezeAuthorityActive:
-        securityData?.freezeAuthorityActive || false,
-
-      liquidityUsd:
-        liquidityData?.liquidityUsd ?? null,
-    });
-
-    return result.risk;
-  }
-
-  const risk = calculateRiskScore();
 
   const riskAnalysis = holderData
     ? calculateRisk({
@@ -408,6 +416,13 @@ export default function Home() {
           liquidityData?.liquidityUsd ?? null,
       })
     : null;
+
+  const risk: RiskLevel = riskAnalysis?.risk || {
+    score: 0,
+    label: "NOT ANALYZED",
+    description:
+      "Risk analysis will appear after holder data is retrieved.",
+  };
 
   /* =======================================================
      TOKEN DISPLAY VALUES
