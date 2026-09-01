@@ -93,8 +93,6 @@ type DeployerData = {
   address: string | null;
   solBalance: number;
   recentTransactionCount: number;
-  source?: string;
-  creationSignature?: string | null;
   flags: DeployerFlag[];
 };
 
@@ -179,8 +177,6 @@ export default function Home() {
     useState<HolderData | null>(null);
   const [securityData, setSecurityData] =
     useState<SecurityData | null>(null);
-  const [deployerData, setDeployerData] =
-    useState<DeployerData | null>(null);
   const [liquidityData, setLiquidityData] =
     useState<LiquidityData | null>(null);
 
@@ -215,7 +211,6 @@ export default function Home() {
     setHolderData(null);
     setSecurityData(null);
     setLiquidityData(null);
-    setDeployerData(null);
 
     try {
       /* ===================================================
@@ -391,8 +386,6 @@ export default function Home() {
             "Deployer analysis unavailable:",
             deployerResult.error
           );
-        } else if (deployerResult.deployer) {
-          setDeployerData(deployerResult.deployer);
         }
       } catch (deployerError) {
         /*
@@ -433,7 +426,6 @@ export default function Home() {
     setHolderData(null);
     setSecurityData(null);
     setLiquidityData(null);
-    setDeployerData(null);
     setError("");
     setCopied(false);
   }
@@ -2135,203 +2127,6 @@ export default function Home() {
                     </table>
 
                   </div>
-
-                </div>
-
-              </section>
-            )}
-
-            {/* =============================================
-                DEPLOYER INTELLIGENCE
-                ============================================= */}
-
-            {deployerData && (
-              <section className="mt-10">
-
-                <div className="mb-6">
-
-                  <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/30">
-                    Wallet Intelligence
-                  </p>
-
-                  <h2 className="mt-2 text-2xl font-black tracking-tight">
-                    Deployer Intelligence
-                  </h2>
-
-                  <p className="mt-2 max-w-2xl text-xs leading-5 text-white/25">
-                    Analysis of the wallet associated with the
-                    token creation transaction and its recent
-                    blockchain activity.
-                  </p>
-
-                </div>
-
-                <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-[#1b050b]/65">
-
-                  <div className="grid gap-px bg-white/[0.04] md:grid-cols-3">
-
-                    {/* ASSOCIATED WALLET */}
-
-                    <div className="bg-[#1b050b]/80 p-5">
-
-                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/25">
-                        Associated Wallet
-                      </p>
-
-                      {deployerData.address ? (
-                        <p className="mt-3 font-mono text-xs text-white/65">
-                          {shortenAddress(
-                            deployerData.address,
-                            10,
-                            8
-                          )}
-                        </p>
-                      ) : (
-                        <p className="mt-3 text-xs text-white/30">
-                          Not identified
-                        </p>
-                      )}
-
-                      {deployerData.source && (
-                        <p className="mt-2 text-[10px] text-white/20">
-                          Source:{" "}
-                          {deployerData.source.replace(
-                            /_/g,
-                            " "
-                          )}
-                        </p>
-                      )}
-
-                    </div>
-
-                    {/* SOL BALANCE */}
-
-                    <div className="bg-[#1b050b]/80 p-5">
-
-                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/25">
-                        SOL Balance
-                      </p>
-
-                      <p className="mt-3 font-mono text-xl font-bold text-white/70">
-                        {deployerData.solBalance.toFixed(3)}
-                        <span className="ml-1 text-xs text-white/25">
-                          SOL
-                        </span>
-                      </p>
-
-                      <p className="mt-2 text-[10px] text-white/20">
-                        Current wallet balance
-                      </p>
-
-                    </div>
-
-                    {/* RECENT ACTIVITY */}
-
-                    <div className="bg-[#1b050b]/80 p-5">
-
-                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/25">
-                        Recent Activity
-                      </p>
-
-                      <p className="mt-3 font-mono text-xl font-bold text-white/70">
-                        {deployerData.recentTransactionCount}
-                      </p>
-
-                      <p className="mt-2 text-[10px] text-white/20">
-                        Transactions retrieved
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                  {/* INTELLIGENCE SIGNALS */}
-
-                  {deployerData.flags.length > 0 && (
-                    <div className="border-t border-white/[0.05] p-5">
-
-                      <p className="mb-4 text-[9px] font-bold uppercase tracking-[0.18em] text-white/25">
-                        Intelligence Signals
-                      </p>
-
-                      <div className="grid gap-3 md:grid-cols-2">
-
-                        {deployerData.flags.map(
-                          (flag, index) => {
-
-                            const borderClass =
-                              flag.type === "danger"
-                                ? "border-red-500/20 bg-red-500/[0.05]"
-                                : flag.type === "warning"
-                                ? "border-yellow-500/20 bg-yellow-500/[0.05]"
-                                : "border-emerald-500/20 bg-emerald-500/[0.05]";
-
-                            const textClass =
-                              flag.type === "danger"
-                                ? "text-red-400"
-                                : flag.type === "warning"
-                                ? "text-yellow-400"
-                                : "text-emerald-400";
-
-                            return (
-                              <div
-                                key={`${flag.title}-${index}`}
-                                className={`rounded-xl border p-4 ${borderClass}`}
-                              >
-
-                                <div className="flex items-center gap-2">
-
-                                  <span
-                                    className={`h-1.5 w-1.5 rounded-full ${
-                                      flag.type === "danger"
-                                        ? "bg-red-400"
-                                        : flag.type === "warning"
-                                        ? "bg-yellow-400"
-                                        : "bg-emerald-400"
-                                    }`}
-                                  />
-
-                                  <p
-                                    className={`text-[10px] font-bold uppercase tracking-wider ${textClass}`}
-                                  >
-                                    {flag.title}
-                                  </p>
-
-                                </div>
-
-                                <p className="mt-2 text-xs leading-5 text-white/35">
-                                  {flag.description}
-                                </p>
-
-                              </div>
-                            );
-                          }
-                        )}
-
-                      </div>
-
-                    </div>
-                  )}
-
-                  {/* CREATION TRANSACTION */}
-
-                  {deployerData.creationSignature && (
-                    <div className="border-t border-white/[0.05] px-5 py-4">
-
-                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/20">
-                        Creation Transaction
-                      </p>
-
-                      <p className="mt-2 break-all font-mono text-[10px] text-white/30">
-                        {shortenAddress(
-                          deployerData.creationSignature,
-                          14,
-                          10
-                        )}
-                      </p>
-
-                    </div>
-                  )}
 
                 </div>
 
